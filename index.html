@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingoing Vaidya Black Hole — 2D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05060A;
+    --panel:#0B0D14;
+    --panel-2:#0E1119;
+    --line:#1B1F2C;
+    --line-soft:#14172126;
+    --txt:#E9EBF2;
+    --muted:#8A90A3;
+    --muted-2:#5E6373;
+    --hot:#FFE9C4;
+    --amber:#FFB04D;
+    --ember:#E8623A;
+    --deep:#9C2417;
+    --cool:#6FB3FF;
+    --horizon-edge:#FFB347;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--txt);
+    font-family:"JetBrains Mono",ui-monospace,monospace;
+    -webkit-font-smoothing:antialiased;
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    overflow-x:hidden;
+  }
+  .wrap{
+    width:100%;
+    max-width:1180px;
+    margin:0 auto;
+    padding:clamp(16px,3vw,34px);
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+
+  /* ---- header ---- */
+  header{display:flex;flex-direction:column;gap:6px}
+  .eyebrow{
+    font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--amber);font-weight:500;
+  }
+  h1{
+    font-family:"Spectral",Georgia,serif;
+    font-weight:600;
+    font-size:clamp(26px,5vw,42px);
+    line-height:1.04;
+    letter-spacing:-.01em;
+  }
+  h1 em{font-style:italic;color:var(--muted)}
+  .sub{
+    color:var(--muted);font-size:13px;max-width:62ch;line-height:1.5;
+  }
+  .sub code{
+    color:var(--hot);background:#16110a;border:1px solid #2a2114;
+    padding:1px 6px;border-radius:5px;font-size:12px;
+  }
+
+  /* ---- panels ---- */
+  .stage{
+    display:grid;
+    grid-template-columns:1.25fr 1fr;
+    gap:14px;
+  }
+  @media (max-width:760px){ .stage{grid-template-columns:1fr} }
+  .panel{
+    position:relative;
+    background:
+      radial-gradient(120% 90% at 50% 10%, #0e111b 0%, var(--panel) 60%, #07080d 100%);
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+    aspect-ratio:1/1;
+    min-height:0;
+  }
+  .panel.spacetime{ aspect-ratio:auto }
+  @media (min-width:761px){ .panel.spacetime{aspect-ratio:auto;height:auto} }
+  .panel .tag{
+    position:absolute;top:12px;left:14px;z-index:3;
+    font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--muted);pointer-events:none;
+  }
+  .panel .tag b{color:var(--horizon-edge);font-weight:500}
+  canvas{display:block;width:100%;height:100%}
+
+  /* ---- readout ---- */
+  .readout{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  @media (max-width:620px){ .readout{grid-template-columns:repeat(2,1fr)} }
+  .cell{
+    background:var(--panel-2);
+    padding:13px 14px 12px;
+    display:flex;flex-direction:column;gap:5px;
+  }
+  .cell .k{
+    font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);
+  }
+  .cell .val{
+    font-size:clamp(17px,2.4vw,22px);font-weight:500;font-variant-numeric:tabular-nums;
+    color:var(--txt);
+  }
+  .cell .val span{font-size:12px;color:var(--muted);margin-left:3px}
+  .cell.accent .val{color:var(--amber)}
+
+  /* ---- controls ---- */
+  .controls{
+    display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;
+  }
+  .btns{display:flex;gap:8px}
+  button{
+    font-family:inherit;font-size:12px;letter-spacing:.04em;
+    color:var(--txt);background:#13161f;border:1px solid var(--line);
+    padding:9px 16px;border-radius:8px;cursor:pointer;
+    transition:border-color .15s, background .15s, color .15s;
+  }
+  button:hover{border-color:#2c3140;background:#171b26}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  button.primary{background:#241b0d;border-color:#4a3a1c;color:var(--hot)}
+  button.primary:hover{background:#2c2110;border-color:#6a5226}
+  .ctrl{display:flex;flex-direction:column;gap:6px;min-width:160px;flex:1}
+  .ctrl label{
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    display:flex;justify-content:space-between;
+  }
+  .ctrl label b{color:var(--cool);font-weight:500}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;height:4px;border-radius:3px;
+    background:#1d2230;outline:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+    background:var(--amber);border:2px solid #0b0d14;cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:15px;height:15px;border-radius:50%;background:var(--amber);
+    border:2px solid #0b0d14;cursor:pointer;
+  }
+  input[type=range]:focus-visible{outline:2px solid var(--amber);outline-offset:4px}
+
+  footer{
+    color:var(--muted-2);font-size:11px;line-height:1.6;
+    border-top:1px solid var(--line);padding-top:14px;
+  }
+  footer b{color:var(--muted);font-weight:500}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Phase 1 · Apparent Horizon</span>
+    <h1>Ingoing Vaidya Black Hole <em>— 2D</em></h1>
+    <p class="sub">A spherically symmetric, uncharged hole absorbing null dust. The horizon is rendered directly from the core equation <code>r_A(v) = 2M(v)</code> in normalized units (G = c = 1). Each shell of energy crossing the horizon adds to the mass function, and M(v) only ever increases.</p>
+  </header>
+
+  <div class="stage">
+    <div class="panel spatial">
+      <div class="tag">Spatial view · <b>infalling null shells → r_A</b></div>
+      <canvas id="space"></canvas>
+    </div>
+    <div class="panel spacetime">
+      <div class="tag">Spacetime · <b>v vs r · horizon worldline</b></div>
+      <canvas id="diagram"></canvas>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div class="cell"><span class="k">Advanced time v</span><span class="val" id="r-v">0.0</span></div>
+    <div class="cell accent"><span class="k">Mass M(v)</span><span class="val" id="r-m">1.000</span></div>
+    <div class="cell"><span class="k">Horizon r_A</span><span class="val" id="r-ra">2.000</span></div>
+    <div class="cell"><span class="k">Accretion dM/dv</span><span class="val" id="r-dmdv">0.000</span></div>
+    <div class="cell"><span class="k">Shells absorbed</span><span class="val" id="r-n">0</span></div>
+  </div>
+
+  <div class="controls">
+    <div class="btns">
+      <button class="primary" id="play">Pause</button>
+      <button id="reset">Reset</button>
+    </div>
+    <div class="ctrl">
+      <label>Infall rate <b id="lab-rate">1.4</b></label>
+      <input type="range" id="rate" min="0.2" max="4" step="0.1" value="1.4">
+    </div>
+    <div class="ctrl">
+      <label>Shell energy <b id="lab-en">0.06</b></label>
+      <input type="range" id="energy" min="0.02" max="0.2" step="0.01" value="0.06">
+    </div>
+  </div>
+
+  <footer>
+    <b>Scope.</b> Only the spec's stated assumptions are modeled: spherical symmetry, zero rotation, zero charge, null-dust infall along constant-v, and the monotone mass function. The true global event horizon is teleological and intentionally out of scope — what you see is the apparent (future outer trapping) horizon.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- canvases ----------
+  const spaceCv = document.getElementById("space");
+  const diagCv  = document.getElementById("diagram");
+  const sctx = spaceCv.getContext("2d");
+  const dctx = diagCv.getContext("2d");
+  let SW=0,SH=0,DW=0,DH=0,DPR=1;
+
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio||1, 2);
+    for (const [cv,ctx,set] of [[spaceCv,sctx,(w,h)=>{SW=w;SH=h;}],[diagCv,dctx,(w,h)=>{DW=w;DH=h;}]]){
+      const r = cv.getBoundingClientRect();
+      const w = Math.max(1,Math.round(r.width)), h = Math.max(1,Math.round(r.height));
+      cv.width = w*DPR; cv.height = h*DPR;
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+      set(w,h);
+    }
+  }
+
+  // ---------- state ----------
+  const INIT_M = 1.0;
+  let state, params, scale, spawnAcc, dmWindow;
+  function reset(){
+    state = { v:0, M:INIT_M, packets:[], absorbed:0, dMdv:0, flashes:[], history:[], lastHistV:0 };
+    scale = 1;                 // px per unit, eased toward auto-fit target
+    spawnAcc = 0;
+    dmWindow = [];             // {v, M} samples for dM/dv
+    state.history.push({v:0, rA:2*INIT_M});
+  }
+  params = {
+    rate: 1.4,                 // shells per unit v
+    energy: 0.06,              // ΔM per shell
+    vPerSec: 1.35,             // advanced time advanced per real second
+    infallPerV: 1.9,           // how fast r decreases per unit v (null dust ≈ light)
+  };
+  reset();
+
+  // ---------- helpers ----------
+  function rA(){ return 2*state.M; }
+
+  // blackbody-ish redshift ramp: t=1 hot(far) -> t=0 deep red(near horizon)
+  function shellColor(t){
+    t = Math.max(0,Math.min(1,t));
+    const stops = [
+      [0.00,[124,20,16]],   // deep
+      [0.30,[156,36,23]],
+      [0.55,[232,98,58]],
+      [0.78,[255,176,77]],
+      [1.00,[255,233,196]], // hot
+    ];
+    let a=stops[0],b=stops[stops.length-1];
+    for(let i=0;i<stops.length-1;i++){ if(t>=stops[i][0]&&t<=stops[i+1][0]){a=stops[i];b=stops[i+1];break;} }
+    const f=(t-a[0])/((b[0]-a[0])||1);
+    const c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*f));
+    return c;
+  }
+
+  // ---------- simulation ----------
+  function step(dv){
+    state.v += dv;
+
+    // spawn shells from the rim
+    spawnAcc += params.rate*dv;
+    const spawnR = (0.47*Math.min(SW,SH))/Math.max(scale,1e-6);
+    while(spawnAcc>=1){
+      spawnAcc-=1;
+      state.packets.push({ r:spawnR, v0:state.v, e:params.energy, spawnR });
+    }
+
+    // advance shells inward; absorb at horizon
+    const horizon = rA();
+    for(let i=state.packets.length-1;i>=0;i--){
+      const p=state.packets[i];
+      p.r -= params.infallPerV*dv;
+      if(p.r<=horizon){
+        state.M += p.e;                 // mass steps up (dM/dv >= 0, enforced by construction)
+        state.absorbed++;
+        if(!reduceMotion) state.flashes.push({r:rA(), a:1});
+        state.packets.splice(i,1);
+        state.history.push({v:state.v, rA:rA()});
+      }
+    }
+
+    // record smooth horizon worldline even without absorption
+    if(state.v - state.lastHistV > 0.25){
+      state.history.push({v:state.v, rA:rA()});
+      state.lastHistV = state.v;
+      if(state.history.length>2000) state.history.splice(0, state.history.length-2000);
+    }
+
+    // accretion rate over a short v-window
+    dmWindow.push({v:state.v, M:state.M});
+    while(dmWindow.length>2 && state.v-dmWindow[0].v>2.0) dmWindow.shift();
+    const w0=dmWindow[0], w1=dmWindow[dmWindow.length-1];
+    state.dMdv = (w1.v>w0.v)? (w1.M-w0.M)/(w1.v-w0.v) : 0;
+
+    // ease the spatial auto-fit so the growing disk never overflows
+    const targetHorizonPx = 0.26*Math.min(SW,SH);
+    const targetScale = targetHorizonPx / Math.max(horizon,1e-6);
+    scale += (targetScale-scale)*Math.min(1, dv*1.5);
+
+    // decay flashes
+    for(let i=state.flashes.length-1;i>=0;i--){
+      state.flashes[i].a -= dv*2.2;
+      if(state.flashes[i].a<=0) state.flashes.splice(i,1);
+    }
+  }
+
+  // ---------- render: spatial ----------
+  function drawSpace(){
+    const cx=SW/2, cy=SH/2;
+    sctx.clearRect(0,0,SW,SH);
+
+    // vignette / deep field
+    const bg=sctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(SW,SH)*0.7);
+    bg.addColorStop(0,"#0c0f18"); bg.addColorStop(1,"#06070c");
+    sctx.fillStyle=bg; sctx.fillRect(0,0,SW,SH);
+
+    const horizonPx = rA()*scale;
+
+    // photon-ring / accretion glow at ~1.5 r_A
+    const glowR = horizonPx*1.55;
+    const glow=sctx.createRadialGradient(cx,cy,horizonPx*0.96,cx,cy,glowR);
+    glow.addColorStop(0,"rgba(255,176,71,0.42)");
+    glow.addColorStop(0.45,"rgba(232,98,58,0.16)");
+    glow.addColorStop(1,"rgba(232,98,58,0)");
+    sctx.fillStyle=glow;
+    sctx.beginPath(); sctx.arc(cx,cy,glowR,0,Math.PI*2); sctx.fill();
+
+    // infalling shells (rings), colored by redshift toward horizon
+    sctx.lineWidth=1.6;
+    for(const p of state.packets){
+      const t=(p.r-rA())/((p.spawnR-rA())||1);
+      const [r,g,b]=shellColor(t);
+      const rad=p.r*scale;
+      if(rad<2||rad>Math.max(SW,SH)) continue;
+      const alpha=0.35+0.5*t;
+      sctx.strokeStyle=`rgba(${r},${g},${b},${alpha})`;
+      sctx.beginPath(); sctx.arc(cx,cy,rad,0,Math.PI*2); sctx.stroke();
+    }
+
+    // absorption flashes
+    for(const f of state.flashes){
+      sctx.strokeStyle=`rgba(255,233,196,${f.a})`;
+      sctx.lineWidth=2.5*f.a+0.5;
+      sctx.beginPath(); sctx.arc(cx,cy,horizonPx,0,Math.PI*2); sctx.stroke();
+    }
+
+    // the horizon: black shadow disk with a bright edge
+    sctx.beginPath(); sctx.arc(cx,cy,horizonPx,0,Math.PI*2);
+    sctx.fillStyle="#000"; sctx.fill();
+    sctx.lineWidth=1.5;
+    sctx.strokeStyle="rgba(255,179,71,0.9)";
+    sctx.stroke();
+
+    // r_A label tick
+    sctx.strokeStyle="rgba(255,179,71,0.35)";
+    sctx.lineWidth=1; sctx.setLineDash([3,4]);
+    sctx.beginPath(); sctx.moveTo(cx,cy); sctx.lineTo(cx+horizonPx,cy); sctx.stroke();
+    sctx.setLineDash([]);
+    sctx.fillStyle="rgba(255,179,71,0.75)";
+    sctx.font='11px "JetBrains Mono", monospace';
+    sctx.fillText("r_A = "+rA().toFixed(2), cx+6, cy-7);
+  }
+
+  // ---------- render: spacetime (v vs r) ----------
+  function drawDiagram(){
+    dctx.clearRect(0,0,DW,DH);
+    const padL=46, padR=16, padT=30, padB=34;
+    const plotW=DW-padL-padR, plotH=DH-padT-padB;
+
+    dctx.fillStyle="#080a11"; dctx.fillRect(0,0,DW,DH);
+
+    // ranges
+    const vMax=Math.max(6, state.v);
+    const vMin=Math.max(0, vMax-22);          // scrolling window of advanced time
+    const rMax=Math.max(6, rA()*2.1);
+
+    const X = r => padL + (r/rMax)*plotW;
+    const Y = v => padT + plotH - ((v-vMin)/(vMax-vMin||1))*plotH;
+
+    // grid
+    dctx.strokeStyle="#141824"; dctx.lineWidth=1;
+    dctx.font='10px "JetBrains Mono", monospace';
+    dctx.fillStyle="#5E6373";
+    for(let r=0;r<=rMax;r+=Math.ceil(rMax/6)){
+      const x=X(r);
+      dctx.beginPath(); dctx.moveTo(x,padT); dctx.lineTo(x,padT+plotH); dctx.stroke();
+      dctx.fillText(r.toFixed(0), x-3, padT+plotH+16);
+    }
+    const vStep=Math.max(2,Math.ceil((vMax-vMin)/5));
+    for(let v=Math.ceil(vMin/vStep)*vStep; v<=vMax; v+=vStep){
+      const y=Y(v);
+      dctx.beginPath(); dctx.moveTo(padL,y); dctx.lineTo(padL+plotW,y); dctx.stroke();
+      dctx.fillText(v.toFixed(0), 8, y+3);
+    }
+
+    // axis titles
+    dctx.fillStyle="#8A90A3";
+    dctx.fillText("r →", padL+plotW-26, padT+plotH+16);
+    dctx.save(); dctx.translate(14,padT+12); dctx.rotate(-Math.PI/2);
+    dctx.fillText("v →", 0,0); dctx.restore();
+
+    // ingoing null rays (constant v) for current shells — horizontal segments
+    dctx.strokeStyle="rgba(255,176,77,0.18)"; dctx.lineWidth=1;
+    for(const p of state.packets){
+      if(p.v0<vMin) continue;
+      const y=Y(p.v0);
+      dctx.beginPath(); dctx.moveTo(X(rMax),y); dctx.lineTo(X(Math.max(p.r,rA())),y); dctx.stroke();
+    }
+
+    // trapped region (left of horizon) shaded + worldline
+    const pts=state.history.filter(h=>h.v>=vMin-1);
+    if(pts.length>1){
+      // fill
+      dctx.beginPath();
+      dctx.moveTo(X(0),Y(pts[0].v));
+      for(const h of pts) dctx.lineTo(X(h.rA),Y(h.v));
+      dctx.lineTo(X(0),Y(pts[pts.length-1].v));
+      dctx.closePath();
+      dctx.fillStyle="rgba(111,179,255,0.06)"; dctx.fill();
+      // worldline r_A(v)
+      dctx.beginPath();
+      dctx.moveTo(X(pts[0].rA),Y(pts[0].v));
+      for(const h of pts) dctx.lineTo(X(h.rA),Y(h.v));
+      dctx.strokeStyle="#6FB3FF"; dctx.lineWidth=2; dctx.stroke();
+    }
+
+    // current horizon marker
+    const yNow=Y(state.v);
+    dctx.fillStyle="#6FB3FF";
+    dctx.beginPath(); dctx.arc(X(rA()),yNow,3,0,Math.PI*2); dctx.fill();
+    dctx.fillStyle="rgba(111,179,255,0.85)";
+    dctx.fillText("r_A(v)", X(rA())+6, yNow-5);
+  }
+
+  // ---------- readout ----------
+  const els={
+    v:document.getElementById("r-v"), m:document.getElementById("r-m"),
+    ra:document.getElementById("r-ra"), dmdv:document.getElementById("r-dmdv"),
+    n:document.getElementById("r-n"),
+  };
+  function updateReadout(){
+    els.v.textContent=state.v.toFixed(1);
+    els.m.textContent=state.M.toFixed(3);
+    els.ra.textContent=rA().toFixed(3);
+    els.dmdv.textContent=state.dMdv.toFixed(3);
+    els.n.textContent=state.absorbed;
+  }
+
+  // ---------- loop ----------
+  let running=!reduceMotion, last=performance.now();
+  function frame(now){
+    let dt=(now-last)/1000; last=now;
+    dt=Math.min(dt,0.05);
+    if(running) step(params.vPerSec*dt);
+    drawSpace(); drawDiagram(); updateReadout();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- controls ----------
+  const playBtn=document.getElementById("play");
+  playBtn.addEventListener("click",()=>{
+    running=!running; playBtn.textContent=running?"Pause":"Play";
+    last=performance.now();
+  });
+  document.getElementById("reset").addEventListener("click",()=>{ reset(); resize(); });
+  const rate=document.getElementById("rate"), energy=document.getElementById("energy");
+  rate.addEventListener("input",()=>{ params.rate=+rate.value; document.getElementById("lab-rate").textContent=(+rate.value).toFixed(1); });
+  energy.addEventListener("input",()=>{ params.energy=+energy.value; document.getElementById("lab-en").textContent=(+energy.value).toFixed(2); });
+
+  if(reduceMotion) playBtn.textContent="Play";
+
+  window.addEventListener("resize",resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
